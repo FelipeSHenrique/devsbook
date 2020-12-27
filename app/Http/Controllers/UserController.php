@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\User;
+use App\Post;
+use App\PostLike;
+use App\PostComment;
+use App\UserRelation;
 // Biblioteca de imagens
 use Image;
 
@@ -162,6 +166,53 @@ class UserController extends Controller
             $array['error'] = 'Arquivo não enviado!';
             return $array;
         }
+
+        return $array;
+    }
+
+    public function read($id = false) {
+        // GET api/user
+        // GET api/user/123
+        $array = ['error'=>''];
+
+        if ($id) {
+            // Pega todas as informaçções de um usuário especifico
+            $info = User::find($id);
+            if (!$info) {
+                $array['error'] = 'Usuário inexistente';
+                return $array;
+            }
+        } else {
+            // Pega as informações do usuário que está logado no momento
+            $info = $this->loggedUser;
+        }
+
+        $info['avatar'] = url('media/avatars/'.$info['avatar']);
+        $info['cover'] = url('media/covers/'.$info['cover']);
+
+        $info['me'] = ($info['id'] == $this->loggedUser['id']) ? true : false;
+
+        // Pegar quando anos o usuário tem usando a data de nascimento
+        $dateFrom = new \DateTime($info['birthdate']);
+        $dateTo = new \DateTime('today');
+        $info['age'] = $dateFrom->diff($dateTo)->y;
+
+        // Pegar a quantidade total de pessoas que me seguem
+        $info['followers'] = UserRelation::where('user_to', $info['id'])->count();
+        // Pegar a quantidade total de pessoas que eu sigo
+        $info['following'] = UserRelation::where('user_from', $info['id'])->count();
+
+        $info['photoCount'] = Post::where('id_user', $info['id'])
+        ->where('type', 'photo')
+        ->count();  
+        
+        // Verifica se eu já sigo o usuário no qual estou visitando o perfil
+        $hasRelation = UserRelation::where('user_from', $this->loggedUser['id'])
+        ->where('user_to', $info['id'])
+        ->count();
+        $info['isFollowing'] = ($hasRelation > 0) ? true : false;
+
+        $array['data'] = $info;
 
         return $array;
     }
