@@ -216,4 +216,78 @@ class UserController extends Controller
 
         return $array;
     }
+
+    public function follow($id) {
+        $array = ['error'=>''];
+
+        // VERIFICAR SE NÃO ESTOU SEGUINDO EU MESMO
+        if ($id == $this->loggedUser['id']) {
+            $array['error'] = 'Você não pode seguir a si mesmo.';
+            return $array;
+        }
+
+        $userExists = User::find($id);
+        if ($userExists) {
+
+            $relation = UserRelation::where('user_from', $this->loggedUser['id'])
+            ->where('user_to', $id)
+            ->first();
+
+            if ($relation) {
+                // Parar de seguir
+                $relation->delete();
+            } else {
+                // Seguir
+                $newRelation = new UserRelation();
+                $newRelation->user_from = $this->loggedUser['id'];
+                $newRelation->user_to = $id;
+                $newRelation->save();
+            }
+
+        } else {
+            $array['error'] = 'Usuário inexistente!';
+            return $array;
+        }
+
+        return $array;
+    }
+
+    public function followers($id) {
+        $array = ['error'=>''];
+
+        $userExists = User::find($id);
+        if ($userExists) {
+
+            $followers = UserRelation::where('user_to', $id)->get();
+            $following = UserRelation::where('user_from', $id)->get();
+
+            $array['followers'] = [];
+            $array['following'] = [];
+
+            foreach($followers as $item) {
+                $user = User::find($item['user_from']);
+                $array['followers'][] = [
+                    'id' => $user['id'],
+                    'name' => $user['name'],
+                    'avatar' => url('media/avatars/'.$user['avatar'])
+                ];
+            }
+
+            foreach($following as $item) {
+                $user = User::find($item['user_from']);
+                $array['following'][] = [
+                    'id' => $user['id'],
+                    'name' => $user['name'],
+                    'avatar' => url('media/avatars/'.$user['avatar'])
+                ];
+            }
+
+        } else {
+            $array['error'] = 'Usuário inexistente!';
+            return $array;
+        }
+
+        return $array;
+    }
+
 }
